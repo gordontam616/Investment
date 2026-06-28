@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Investment Hub · 我的持倉總覽</title>
+<style>
+  :root{
+    --bg:#0c0a1a; --bg-2:#110d26; --card:#17132e; --card-2:#1d1838; --border:#2a2350;
+    --accent:#8b5cf6; --accent-2:#6d4aff; --accent-soft:rgba(139,92,246,.15);
+    --green:#2dd4a7; --green-bg:rgba(45,212,167,.12); --red:#f4607a; --red-bg:rgba(244,96,122,.12);
+    --text:#ece9fb; --muted:#9a93c2; --muted-2:#6f6996; --radius:18px; --shadow:0 16px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang HK","Microsoft JhengHei",sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(109,74,255,.18),transparent 60%),radial-gradient(900px 500px at -10% 10%,rgba(139,92,246,.12),transparent 55%),var(--bg);
+    color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;background:rgba(12,10,26,.72);backdrop-filter:blur(14px)}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-size:18px;box-shadow:0 6px 18px rgba(109,74,255,.5)}
+  .brand small{display:block;font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.5px}
+  .topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn{font:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card-2);color:var(--text);padding:9px 14px;border-radius:11px;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+  .btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent}
+  .btn.sm{font-size:12px;padding:7px 11px}
+  .shell{max-width:1240px;margin:0 auto;padding:28px 32px 64px}
+  .tabs{display:flex;gap:8px;margin-bottom:26px;flex-wrap:wrap}
+  .tab{font:inherit;font-weight:600;font-size:14px;cursor:pointer;padding:11px 20px;border-radius:13px;border:1px solid var(--border);background:var(--card);color:var(--muted);display:flex;align-items:center;gap:9px;transition:all .15s}
+  .tab .dot{width:9px;height:9px;border-radius:50%;background:var(--muted-2)}
+  .tab[data-acc="ibkr"] .dot{background:#e23b3b}
+  .tab[data-acc="futu"] .dot{background:#ff8a00}
+  .tab[data-acc="all"] .dot{background:var(--accent)}
+  .tab.active{color:var(--text);border-color:var(--accent);background:var(--accent-soft);box-shadow:var(--shadow)}
+  .statusbar{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin-bottom:18px;flex-wrap:wrap}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--muted-2)}
+  .live-dot.on{background:var(--green);box-shadow:0 0 0 4px var(--green-bg)}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+  .kpi{background:linear-gradient(160deg,var(--card),var(--bg-2));border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:radial-gradient(circle,var(--accent-soft),transparent 70%)}
+  .kpi .label{font-size:12px;color:var(--muted);letter-spacing:.4px;margin-bottom:10px}
+  .kpi .value{font-size:26px;font-weight:750;letter-spacing:-.5px}
+  .kpi .sub{font-size:12.5px;margin-top:8px;font-weight:600}
+  .up{color:var(--green)} .down{color:var(--red)}
+  .pill{padding:2px 8px;border-radius:7px;font-size:11.5px;font-weight:700}
+  .pill.up{background:var(--green-bg)} .pill.down{background:var(--red-bg)}
+  .grid{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
+  .panel h2{font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .panel .hint{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .panel-head h2{margin-bottom:0}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{text-align:right;color:var(--muted);font-weight:600;font-size:11.5px;letter-spacing:.4px;padding:0 10px 12px;border-bottom:1px solid var(--border)}
+  thead th:first-child,tbody td:first-child{text-align:left}
+  tbody td{padding:13px 10px;text-align:right;border-bottom:1px solid rgba(42,35,80,.5)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr.clickable{cursor:pointer}
+  tbody tr.clickable:hover{background:rgba(139,92,246,.08)}
+  .sym{display:flex;align-items:center;gap:11px}
+  .sym .tk{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--border)}
+  .sym .nm{font-size:11.5px;color:var(--muted);font-weight:500}
+  .sym strong{font-size:13.5px}
+  .chev{color:var(--muted-2);font-size:12px}
+  .num{font-variant-numeric:tabular-nums}
+  .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  canvas{max-width:100%}
+  .legend{display:flex;flex-direction:column;gap:9px;flex:1;min-width:130px}
+  .legend-item{display:flex;align-items:center;gap:9px;font-size:12.5px}
+  .legend-item .sw{width:11px;height:11px;border-radius:4px}
+  .legend-item .pct{margin-left:auto;color:var(--muted);font-weight:600}
+  .bars{display:flex;flex-direction:column;gap:13px}
+  .bar-row{display:grid;grid-template-columns:64px 1fr 86px;align-items:center;gap:10px;font-size:12.5px}
+  .bar-track{height:9px;background:var(--card-2);border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px}
+  .news-item{display:flex;gap:13px;padding:14px 0;border-bottom:1px solid rgba(42,35,80,.5)}
+  .news-item:last-child{border-bottom:none}
+  .news-item a:hover h4{color:var(--accent)}
+  .news-tk{flex-shrink:0;width:44px;height:44px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12px;border:1px solid var(--border)}
+  .news-body h4{font-size:13.5px;font-weight:650;line-height:1.4;margin-bottom:5px;transition:color .15s}
+  .news-meta{font-size:11.5px;color:var(--muted-2);display:flex;gap:10px;flex-wrap:wrap}
+  .news-empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px}
+  .badge-soon{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:6px;letter-spacing:.4px}
+  .overlay{position:fixed;inset:0;background:rgba(5,4,12,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:20px;width:560px;max-width:100%;max-height:90vh;overflow:auto;padding:26px;box-shadow:var(--shadow)}
+  .modal.wide{width:860px}
+  .modal h3{font-size:18px;margin-bottom:6px}
+  .modal p.sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+  .drop{border:1.5px dashed var(--border);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px}
+  .drop:hover,.drop.drag{border-color:var(--accent);background:var(--accent-soft)}
+  .drop .big{font-size:30px;margin-bottom:8px}
+  textarea,input.txt{width:100%;background:var(--bg-2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:13px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.6}
+  textarea{min-height:130px;resize:vertical}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .fmt-box{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted);line-height:1.7;margin-bottom:16px;white-space:pre-wrap}
+  .seg{display:flex;gap:6px;margin-bottom:16px;background:var(--bg-2);padding:5px;border-radius:11px}
+  .seg button{flex:1;font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:8px;border-radius:8px;background:transparent;color:var(--muted);border:none}
+  .seg button.active{background:var(--accent-soft);color:var(--text)}
+  .toast-wrap{position:fixed;right:22px;bottom:22px;z-index:200;display:flex;flex-direction:column;gap:10px}
+  .toast{background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;width:320px;box-shadow:var(--shadow);display:flex;gap:12px;animation:slidein .25s ease}
+  @keyframes slidein{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+  .toast .ic{font-size:20px}
+  .toast h5{font-size:13px;margin-bottom:3px}
+  .toast p{font-size:12px;color:var(--muted);line-height:1.5}
+  .foot{text-align:center;color:var(--muted-2);font-size:12px;margin-top:30px;line-height:1.7}
+  label.fld{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+  .help{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.75;margin-top:10px}
+  .help strong{color:var(--text)}
+  .help code{background:var(--card-2);padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--accent)}
+  /* stock detail */
+  .sd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+  .sd-price{font-size:30px;font-weight:780;letter-spacing:-.5px}
+  .sd-sub{font-size:13px;font-weight:600;margin-top:4px}
+  .ma-toggles{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 14px}
+  .ma-tg{font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg-2);color:var(--muted);display:flex;align-items:center;gap:6px}
+  .ma-tg .ln{width:14px;height:3px;border-radius:2px}
+  .ma-tg.on{color:var(--text);border-color:var(--accent)}
+  .range-seg{display:flex;gap:5px;background:var(--bg-2);padding:4px;border-radius:10px}
+  .range-seg button{font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 12px;border-radius:7px;background:transparent;color:var(--muted);border:none}
+  .range-seg button.active{background:var(--accent-soft);color:var(--text)}
+  .chart-card{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+  .chart-lbl{font-size:11.5px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+  @media(max-width:880px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.shell,.topbar{padding-left:18px;padding-right:18px}.modal.wide{width:100%}}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="logo">📈</span><span>Investment Hub<small>一次過睇實你兩個戶口持倉</small></span></div>
+    <div class="topbar-actions">
+      <button class="btn ghost" id="settingsBtn">⚙️ 設定</button>
+      <button class="btn ghost" id="refreshBtn">🔄 更新報價</button>
+      <button class="btn ghost" id="notifyBtn">🔔 啟用通知</button>
+      <button class="btn primary" id="importBtn">⬇ Import 持倉</button>
+    </div>
+  </div>
+
+  <main class="shell">
+    <div class="tabs">
+      <button class="tab active" data-acc="ibkr"><span class="dot"></span> IBKR</button>
+      <button class="tab" data-acc="futu"><span class="dot"></span> 富途牛牛</button>
+      <button class="tab" data-acc="all"><span class="dot"></span> 總覽</button>
+    </div>
+
+    <div class="statusbar">
+      <span class="live-dot" id="liveDot"></span>
+      <span id="liveText">離線模式 · 用示例 / Import 資料（喺設定加 Finnhub Key 即可真實報價 + 新聞）</span>
+    </div>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="grid">
+      <div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📊 持倉明細 <span class="badge-soon">撳入睇 K 線</span></h2>
+            <button class="btn ghost sm" id="importBtn2">⬇ Import</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table id="holdingsTable">
+              <thead><tr><th>股票</th><th>股數</th><th>平均成本</th><th>現價</th><th>市值</th><th>盈虧</th><th>回報%</th><th>佔比</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="panel"><h2>🧩 資產分佈</h2><p class="hint">按個別股票市值佔比</p>
+          <div class="donut-wrap"><canvas id="donut" width="180" height="180"></canvas><div class="legend" id="donutLegend"></div></div>
+        </div>
+        <div class="panel"><h2>💹 個股盈虧分析</h2><p class="hint">未實現盈虧（按市值）</p><div class="bars" id="pnlBars"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>📰 投資新聞 <span class="badge-soon">根據你持倉</span></h2><span id="newsStatus" style="font-size:12px;color:var(--muted);">示例新聞 · 加 Finnhub Key 即可真實</span></div>
+      <div id="newsList"></div>
+    </div>
+
+    <p class="foot">Investment Hub · 資料存喺你部瀏覽器（localStorage），唔會上傳。<br>真實報價 / 新聞經 Finnhub（免費 Key）· 富途 OpenD / IBKR 需本地 gateway（詳見設定）。</p>
+  </main>
+
+  <!-- Import modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3>Import 持倉資料</h3>
+      <p class="sub">匯入到：<strong id="importTarget">IBKR</strong>。支援 CSV 或 JSON，可拖文件或貼落去。</p>
+      <div class="seg"><button class="active" data-fmt="csv">CSV</button><button data-fmt="json">JSON</button></div>
+      <div class="fmt-box" id="fmtBox"></div>
+      <div class="drop" id="drop"><div class="big">📁</div><div style="font-weight:600;font-size:13.5px;">拖文件入來 或 點擊選擇</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">.csv 或 .json</div><input type="file" id="fileInput" accept=".csv,.json" hidden /></div>
+      <textarea id="pasteArea" placeholder="或直接貼你嘅 CSV / JSON 資料到呢度..."></textarea>
+      <div class="modal-actions"><button class="btn ghost" id="loadSampleBtn">載入示例資料</button><button class="btn" id="cancelBtn">取消</button><button class="btn primary" id="confirmImport">匯入</button></div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="modal">
+      <h3>⚙️ 設定 · 真實數據來源</h3>
+      <p class="sub">加 Finnhub 免費 API Key，即刻有真實報價 + 持倉新聞 + 自動通知。</p>
+      <label class="fld">Finnhub API Key</label>
+      <input class="txt" id="finnhubKey" placeholder="Finnhub key（已預設，可改）" /><label class="fld">Twelve Data API Key（K 線真實歷史，建議）</label><input class="txt" id="tdKey" placeholder="喺 twelvedata.com 免費註冊後貼 key（每日 800 次）" />
+      <div class="help">
+        <strong>① 真實報價 + 新聞（最易）</strong><br>
+        去 <code>finnhub.io</code> 免費註冊 → 攞 API key → 貼上面 → 撳「更新報價」。之後會自動每分鐘更新報價、每 5 分鐘抓持倉新聞，有新新聞即彈通知。<br><br>
+        <strong>② 富途牛牛（OpenD）</strong><br>
+        富途要喺你部機行 <code>OpenD</code> gateway（Win/Mac/Linux），再經 Futu API（Python/JS）攞報價。純網頁駁唔到，要一個本地小程式做中轉。<br><br>
+        <strong>③ IBKR</strong><br>
+        IBKR 行 <code>Client Portal Gateway</code>，登入後 API 喺 <code>localhost:5000</code>。同樣需要本地 gateway + 中轉先可以喺網頁攞數據。
+        <br><br><strong>④ K 線真實歷史</strong><br>加 <code>Twelve Data</code> key 即用真實日線（CORS OK）。亦會自動試 Finnhub candle（需付費）同 Stooq（免 key，部分被 CORS 擋）；全部取唔到先用模擬數據。
+      </div>
+      <div class="modal-actions"><button class="btn" id="settingsCancel">取消</button><button class="btn primary" id="settingsSave">儲存</button></div>
+    </div>
+  </div>
+
+  <!-- Stock detail modal -->
+  <div class="overlay" id="detailOverlay">
+    <div class="modal wide">
+      <div class="sd-head">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;"><div class="news-tk" id="sdTk"></div><div><div style="font-size:18px;font-weight:700;" id="sdSym"></div><div class="nm" id="sdName" style="font-size:12.5px;color:var(--muted);"></div></div></div>
+          <div class="sd-price num" id="sdPrice" style="margin-top:12px;"></div>
+          <div class="sd-sub" id="sdChange"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+          <button class="btn ghost sm" id="sdClose">✕ 關閉</button>
+          <div class="range-seg" id="rangeSeg">
+            <button data-r="60">3M</button><button class="active" data-r="120">6M</button><button data-r="250">1Y</button>
+          </div>
+        </div>
+      </div>
+      <div class="ma-toggles" id="maToggles"></div>
+      <div class="chart-card">
+        <div class="chart-lbl"><span>K 線圖（日線）+ 均線</span><span id="klineNote" style="color:var(--muted-2)"></span></div>
+        <canvas id="kline" width="800" height="320"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-lbl"><span>RSI (14)</span><span id="rsiVal"></span></div>
+        <canvas id="rsi" width="800" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const CHART_COLORS=['#8b5cf6','#2dd4a7','#f4607a','#ffa53b','#4cc3ff','#c084fc','#facc15','#5eead4','#fb7185','#a3a3ff'];
+const MA_DEFS=[{p:5,c:'#facc15'},{p:10,c:'#4cc3ff'},{p:20,c:'#f4607a'},{p:50,c:'#2dd4a7'},{p:60,c:'#c084fc'}];
+const fmt=(n)=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN=(n)=>n.toLocaleString('en-US',{maximumFractionDigits:4});
+const pct=(n)=>(n>=0?'+':'')+n.toFixed(2)+'%';
+
+const SAMPLE={
+  ibkr:[{symbol:'AAPL',name:'Apple Inc.',qty:40,avgCost:165.2,price:213.5},{symbol:'NVDA',name:'NVIDIA Corp.',qty:25,avgCost:98.4,price:172.8},{symbol:'MSFT',name:'Microsoft',qty:18,avgCost:362.1,price:451.0},{symbol:'VOO',name:'Vanguard S&P 500',qty:30,avgCost:402.5,price:548.2},{symbol:'TSLA',name:'Tesla Inc.',qty:22,avgCost:245.0,price:201.3}],
+  futu:[{symbol:'0700.HK',name:'騰訊控股',qty:200,avgCost:312.5,price:498.0},{symbol:'9988.HK',name:'阿里巴巴',qty:300,avgCost:88.2,price:118.4},{symbol:'3690.HK',name:'美團',qty:250,avgCost:142.0,price:121.7},{symbol:'1810.HK',name:'小米集團',qty:500,avgCost:18.9,price:42.3},{symbol:'0005.HK',name:'匯豐控股',qty:400,avgCost:62.4,price:97.1}]
+};
+const SAMPLE_NEWS={'AAPL':'Apple 傳將於 WWDC 推 AI 新功能，分析師上調目標價','NVDA':'NVIDIA 新一代 GPU 需求強勁，數據中心收入再創新高','MSFT':'Microsoft Copilot 企業客戶增長，雲端收入超預期','0700.HK':'騰訊遊戲業務回暖，季度收入超市場預期','9988.HK':'阿里雲增長加速，重申回購計劃','1810.HK':'小米電動車交付量創新高，帶動股價上揚','TSLA':'Tesla Robotaxi 進展受關注，股價波動加劇'};
+
+let currentAcc='ibkr', importFmt='csv', settings={key:''}, pollTimer=null, seenNews={};
+
+function load(acc){const raw=localStorage.getItem('ih_'+acc);if(raw){try{return JSON.parse(raw)}catch(e){}}return acc==='all'?[]:(SAMPLE[acc]?JSON.parse(JSON.stringify(SAMPLE[acc])):[])}
+function save(acc,d){localStorage.setItem('ih_'+acc,JSON.stringify(d))}
+function getData(acc){if(acc==='all')return[...load('ibkr'),...load('futu')];return load(acc)}
+function enrich(rows){return rows.map(r=>{const mv=r.qty*r.price,cost=r.qty*r.avgCost,pnl=mv-cost,ret=cost?pnl/cost*100:0;return{...r,mv,cost,pnl,ret}})}
+function loadSettings(){const DK="d90k85hr01qj6urtj24gd90k85hr01qj6urtj250";const DT="089fbc7d69254b699f2c16276f39eb9f";try{settings=JSON.parse(localStorage.getItem("ih_settings"))||{key:""}}catch(e){settings={key:""}}if(!settings.key)settings.key=DK;if(!settings.td)settings.td=DT;}
+function saveSettings(){localStorage.setItem('ih_settings',JSON.stringify(settings))}
+
+function render(){
+  const rows=enrich(getData(currentAcc));
+  const totalMV=rows.reduce((a,r)=>a+r.mv,0),totalCost=rows.reduce((a,r)=>a+r.cost,0);
+  const totalPnl=totalMV-totalCost,totalRet=totalCost?totalPnl/totalCost*100:0;
+  const today=rows.reduce((a,r)=>a+r.mv*0.01*Math.sin(r.symbol.length*1.3),0);
+  const todayPct=totalMV?today/totalMV*100:0;
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi"><div class="label">總市值</div><div class="value num">${fmt(totalMV)}</div><div class="sub" style="color:var(--muted)">${rows.length} 個持倉</div></div>
+    <div class="kpi"><div class="label">今日盈虧</div><div class="value num ${today>=0?'up':'down'}">${fmt(today)}</div><div class="sub"><span class="pill ${today>=0?'up':'down'}">${pct(todayPct)}</span></div></div>
+    <div class="kpi"><div class="label">累計盈虧</div><div class="value num ${totalPnl>=0?'up':'down'}">${fmt(totalPnl)}</div><div class="sub"><span class="pill ${totalPnl>=0?'up':'down'}">${pct(totalRet)}</span></div></div>
+    <div class="kpi"><div class="label">成本總額</div><div class="value num">${fmt(totalCost)}</div><div class="sub" style="color:var(--muted)">平均回報 ${pct(totalRet)}</div></div>`;
+  const tb=document.querySelector('#holdingsTable tbody');
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px;">沒有持倉資料 — 點 Import 匯入</td></tr>`}
+  else{tb.innerHTML=rows.map((r,i)=>`<tr class="clickable" data-i="${i}">
+      <td><div class="sym"><div class="tk">${r.symbol.slice(0,4)}</div><div><strong>${r.symbol}</strong><div class="nm">${r.name||''}</div></div></div></td>
+      <td class="num">${fmtN(r.qty)}</td><td class="num">${fmt(r.avgCost)}</td><td class="num">${fmt(r.price)}</td>
+      <td class="num">${fmt(r.mv)}</td><td class="num ${r.pnl>=0?'up':'down'}">${fmt(r.pnl)}</td>
+      <td class="num ${r.ret>=0?'up':'down'}">${pct(r.ret)}</td><td class="num">${totalMV?(r.mv/totalMV*100).toFixed(1):0}%</td>
+      <td class="chev">›</td></tr>`).join('');
+    tb.querySelectorAll('tr.clickable').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i]));}
+  drawDonut(rows,totalMV);drawBars(rows);renderNews(rows);
+}
+function drawDonut(rows,total){const cv=document.getElementById('donut'),ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);const cx=90,cy=90,rO=82,rI=52,lg=document.getElementById('donutLegend');if(!rows.length||!total){lg.innerHTML='';return}const s=[...rows].sort((a,b)=>b.mv-a.mv);let st=-Math.PI/2;s.forEach((r,i)=>{const f=r.mv/total,e=st+f*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,rO,st,e);ctx.closePath();ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fill();st=e});ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(cx,cy,rI,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';lg.innerHTML=s.map((r,i)=>`<div class="legend-item"><span class="sw" style="background:${CHART_COLORS[i%CHART_COLORS.length]}"></span>${r.symbol}<span class="pct">${(r.mv/total*100).toFixed(1)}%</span></div>`).join('')}
+function drawBars(rows){const w=document.getElementById('pnlBars');if(!rows.length){w.innerHTML='';return}const s=[...rows].sort((a,b)=>b.pnl-a.pnl),mx=Math.max(...s.map(r=>Math.abs(r.pnl)),1);w.innerHTML=s.map(r=>`<div class="bar-row"><span>${r.symbol}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.abs(r.pnl)/mx*100}%;background:${r.pnl>=0?'var(--green)':'var(--red)'}"></div></div><span class="num ${r.pnl>=0?'up':'down'}" style="text-align:right;">${fmt(r.pnl)}</span></div>`).join('')}
+
+function renderNews(rows){const list=document.getElementById('newsList');const syms=rows.map(r=>r.symbol);const items=syms.filter(s=>SAMPLE_NEWS[s]).map(s=>({sym:s,title:SAMPLE_NEWS[s]}));if(!items.length){list.innerHTML=`<div class="news-empty">暫時沒有關聯你持倉股票嘅示例新聞。<br>喺設定加 Finnhub Key 即可抓真實新聞。</div>`;return}list.innerHTML=items.map(n=>`<div class="news-item"><div class="news-tk">${n.sym.slice(0,4)}</div><div class="news-body"><h4>${n.title}</h4><div class="news-meta"><span>${n.sym}</span><span>示例來源</span><span>剛剛</span></div></div></div>`).join('')}
+
+/* ===== Technical indicators ===== */
+function hashSeed(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function genCandles(symbol,lastPrice,n){const rng=mulberry32(hashSeed(symbol));const closes=[];let p=lastPrice;for(let i=0;i<n;i++){closes.push(p);const vol=0.018+rng()*0.015;p=p/(1+(rng()-0.5)*2*vol)}closes.reverse();
+  // rescale so last close == lastPrice
+  const f=lastPrice/closes[closes.length-1];const cl=closes.map(c=>c*f);const out=[];let prev=cl[0];
+  for(let i=0;i<n;i++){const c=cl[i];const o=i===0?c*(1+(rng()-0.5)*0.01):prev;const hi=Math.max(o,c)*(1+rng()*0.012);const lo=Math.min(o,c)*(1-rng()*0.012);out.push({o,h:hi,l:lo,c});prev=c}return out}
+function sma(arr,p){const r=[];for(let i=0;i<arr.length;i++){if(i<p-1){r.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=arr[j];r.push(s/p)}return r}
+function rsi(closes,p){const r=[];let g=0,l=0;for(let i=1;i<closes.length;i++){const d=closes[i]-closes[i-1];if(i<=p){if(d>=0)g+=d;else l-=d;if(i===p){g/=p;l/=p;r[i]=100-100/(1+(l===0?100:g/l))}else r[i]=null}else{const gain=d>0?d:0,loss=d<0?-d:0;g=(g*(p-1)+gain)/p;l=(l*(p-1)+loss)/p;r[i]=100-100/(1+(l===0?100:g/l))}}r[0]=null;return r}
+
+let detailState={candles:[],ma:{5:true,10:false,20:true,50:false,60:false},range:120,row:null};
+function openDetail(row){detailState.row=row;document.getElementById('sdTk').textContent=row.symbol.slice(0,4);document.getElementById('sdSym').textContent=row.symbol;document.getElementById('sdName').textContent=row.name||'';document.getElementById('sdPrice').textContent=fmt(row.price);const ch=(row.ret>=0?'+':'')+fmt(row.pnl)+' ('+pct(row.ret)+')';const sc=document.getElementById('sdChange');sc.textContent='持倉盈虧 '+ch;sc.className='sd-sub '+(row.pnl>=0?'up':'down');
+  document.getElementById('maToggles').innerHTML=MA_DEFS.map(m=>`<button class="ma-tg ${detailState.ma[m.p]?'on':''}" data-p="${m.p}"><span class="ln" style="background:${m.c}"></span>MA${m.p}</button>`).join('');
+  document.getElementById('maToggles').querySelectorAll('.ma-tg').forEach(b=>b.onclick=()=>{const p=+b.dataset.p;detailState.ma[p]=!detailState.ma[p];b.classList.toggle('on');drawKline()});
+  document.getElementById('rangeSeg').querySelectorAll('button').forEach(b=>{b.classList.toggle('active',+b.dataset.r===detailState.range);b.onclick=()=>{detailState.range=+b.dataset.r;document.getElementById('rangeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));buildCandles();drawKline();drawRSI();loadRealCandles()}});
+  document.getElementById('klineNote').textContent=settings.key?'':'模擬數據（可駁真實歷史源）';
+  buildCandles();document.getElementById('detailOverlay').classList.add('open');drawKline();drawRSI();loadRealCandles();}
+function buildCandles(){detailState.candles=genCandles(detailState.row.symbol,detailState.row.price,detailState.range);detailState.source='sim'}
+const candleCache={};
+function ckey(sym,n){return sym+'_'+n}
+function lsCandleGet(ck){try{var o=JSON.parse(localStorage.getItem('ih_c_'+ck));if(o&&o.day===new Date().toDateString())return o}catch(e){}return null}
+function lsCandleSet(ck,res){try{localStorage.setItem('ih_c_'+ck,JSON.stringify({day:new Date().toDateString(),src:res.src,candles:res.candles}))}catch(e){}}
+function mapStooq(sym){if(/^\^/.test(sym))return null;if(/\.HK$/i.test(sym)){var code=sym.replace(/\.HK$/i,'').replace(/^0+/,'');return code?code+'.hk':null}return sym.toLowerCase()+'.us'}
+async function tdCandles(sym,n){if(!settings.td)return null;var u='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(sym)+'&interval=1day&outputsize='+n+'&apikey='+settings.td;var r=await fetch(u);if(!r.ok)return null;var j=await r.json();if(!j||!j.values||j.status==='error')return null;var cs=j.values.map(function(v){return{o:+v.open,h:+v.high,l:+v.low,c:+v.close}}).reverse().filter(function(x){return x.c});return cs.length?{src:'Twelve Data',candles:cs}:null}
+async function fhCandles(sym,n){if(!settings.key)return null;var to=Math.floor(Date.now()/1000),from=to-Math.floor(n*86400*1.7);var u='https://finnhub.io/api/v1/stock/candle?symbol='+encodeURIComponent(sym)+'&resolution=D&from='+from+'&to='+to+'&token='+settings.key;var r=await fetch(u);if(!r.ok)return null;var j=await r.json();if(!j||j.s!=='ok'||!j.c)return null;var cs=[];for(var i=0;i<j.c.length;i++)cs.push({o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]});return cs.length?{src:'Finnhub',candles:cs}:null}
+async function stooqCandles(sym,n){var s=mapStooq(sym);if(!s)return null;var u='https://stooq.com/q/d/l/?s='+s+'&i=d';var r=await fetch(u);if(!r.ok)return null;var t=await r.text();if(!t||t.slice(0,4)!=='Date')return null;var lines=t.trim().split(/\r?\n/).slice(1);var cs=lines.map(function(l){return l.split(',')}).filter(function(c){return c.length>=5}).map(function(c){return{o:+c[1],h:+c[2],l:+c[3],c:+c[4]}}).filter(function(x){return x.c});return cs.length?{src:'Stooq',candles:cs.slice(-n)}:null}
+async function fetchRealCandles(sym,n){var ck=ckey(sym,n);if(candleCache[ck])return candleCache[ck];var ls=lsCandleGet(ck);if(ls){candleCache[ck]=ls;return ls}var fns=[tdCandles,fhCandles,stooqCandles];for(var i=0;i<fns.length;i++){try{var res=await fns[i](sym,n);if(res&&res.candles&&res.candles.length>=20){candleCache[ck]=res;lsCandleSet(ck,res);return res}}catch(e){}}return null}
+async function loadRealCandles(){var row=detailState.row,note=document.getElementById('klineNote');note.textContent='載入緊真實歷史數據…';var res=null;try{res=await fetchRealCandles(row.symbol,detailState.range)}catch(e){}if(detailState.row!==row)return;if(res&&res.candles&&res.candles.length>=20){detailState.candles=res.candles;detailState.source='real';note.textContent='真實數據 · '+res.src}else{detailState.source='sim';note.textContent='模擬數據（真實源取不到）'}drawKline();drawRSI()}
+
+function drawKline(){const cv=document.getElementById('kline'),ctx=cv.getContext('2d');const W=cv.width,H=cv.height,pad=44,padR=14,padT=12,padB=22;ctx.clearRect(0,0,W,H);const cs=detailState.candles;if(!cs.length)return;const closes=cs.map(c=>c.c);let mn=Math.min(...cs.map(c=>c.l)),mx=Math.max(...cs.map(c=>c.h));var _cost=detailState.row&&+detailState.row.avgCost;if(_cost){mn=Math.min(mn,_cost);mx=Math.max(mx,_cost)}const pd=(mx-mn)*0.08;mn-=pd;mx+=pd;const x=i=>pad+(W-pad-padR)*(i/(cs.length-1));const y=v=>padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));
+  ctx.strokeStyle='rgba(42,35,80,.6)';ctx.fillStyle='#6f6996';ctx.font='10px sans-serif';ctx.textAlign='right';for(let g=0;g<=4;g++){const v=mn+(mx-mn)*g/4,yy=y(v);ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(W-padR,yy);ctx.stroke();ctx.fillText(v.toFixed(1),pad-6,yy+3)}
+  const cw=Math.max(1.5,(W-pad-padR)/cs.length*0.6);cs.forEach((c,i)=>{const xc=x(i),up=c.c>=c.o;ctx.strokeStyle=up?'#2dd4a7':'#f4607a';ctx.fillStyle=up?'#2dd4a7':'#f4607a';ctx.beginPath();ctx.moveTo(xc,y(c.h));ctx.lineTo(xc,y(c.l));ctx.stroke();const yo=y(c.o),yc=y(c.c);ctx.fillRect(xc-cw/2,Math.min(yo,yc),cw,Math.max(1,Math.abs(yc-yo)))});
+  MA_DEFS.forEach(m=>{if(!detailState.ma[m.p])return;const ma=sma(closes,m.p);ctx.strokeStyle=m.c;ctx.lineWidth=1.5;ctx.beginPath();let started=false;ma.forEach((v,i)=>{if(v==null)return;const xx=x(i),yy=y(v);if(!started){ctx.moveTo(xx,yy);started=true}else ctx.lineTo(xx,yy)});ctx.stroke();ctx.lineWidth=1});if(_cost){ctx.save();ctx.strokeStyle='#f5b301';ctx.setLineDash([5,4]);ctx.lineWidth=1.2;var ycost=y(_cost);ctx.beginPath();ctx.moveTo(pad,ycost);ctx.lineTo(W-padR,ycost);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f5b301';ctx.textAlign='left';ctx.fillText('成本 '+_cost.toFixed(2),pad+4,ycost-3);ctx.restore();}}
+function drawRSI(){const cv=document.getElementById('rsi'),ctx=cv.getContext('2d');const W=cv.width,H=cv.height,pad=44,padR=14,padT=8,padB=14;ctx.clearRect(0,0,W,H);const closes=detailState.candles.map(c=>c.c);const rv=rsi(closes,14);const x=i=>pad+(W-pad-padR)*(i/(closes.length-1));const y=v=>padT+(H-padT-padB)*(1-v/100);
+  [30,50,70].forEach(lv=>{ctx.strokeStyle=lv===50?'rgba(42,35,80,.6)':'rgba(139,92,246,.25)';ctx.setLineDash(lv===50?[]:[4,4]);ctx.beginPath();ctx.moveTo(pad,y(lv));ctx.lineTo(W-padR,y(lv));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#6f6996';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(lv,pad-6,y(lv)+3)});
+  ctx.strokeStyle='#8b5cf6';ctx.lineWidth=1.6;ctx.beginPath();let st=false;rv.forEach((v,i)=>{if(v==null)return;const xx=x(i),yy=y(v);if(!st){ctx.moveTo(xx,yy);st=true}else ctx.lineTo(xx,yy)});ctx.stroke();ctx.lineWidth=1;const last=rv[rv.length-1];document.getElementById('rsiVal').textContent=last!=null?('現時 '+last.toFixed(1)+(last>=70?' · 超買':last<=30?' · 超賣':'')):''}
+document.getElementById('sdClose').onclick=()=>document.getElementById('detailOverlay').classList.remove('open');
+document.getElementById('detailOverlay').onclick=(e)=>{if(e.target.id==='detailOverlay')e.currentTarget.classList.remove('open')};
+
+/* ===== Tabs ===== */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');currentAcc=t.dataset.acc;render()}));
+
+/* ===== Import ===== */
+const overlay=document.getElementById('overlay');
+function openImport(){if(currentAcc==='all'){currentAcc='ibkr';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.acc==='ibkr'));render()}document.getElementById('importTarget').textContent=currentAcc==='futu'?'富途牛牛':'IBKR';updateFmtBox();overlay.classList.add('open')}
+document.getElementById('importBtn').onclick=openImport;document.getElementById('importBtn2').onclick=openImport;
+document.getElementById('cancelBtn').onclick=()=>overlay.classList.remove('open');
+overlay.onclick=(e)=>{if(e.target===overlay)overlay.classList.remove('open')};
+document.querySelectorAll('#overlay .seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#overlay .seg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');importFmt=b.dataset.fmt;updateFmtBox()});
+function updateFmtBox(){const box=document.getElementById('fmtBox');box.textContent=importFmt==='csv'?'symbol,name,qty,avgCost,price\nAAPL,Apple Inc.,40,165.2,213.5\n0700.HK,騰訊控股,200,312.5,498.0':'[\n  {"symbol":"AAPL","name":"Apple","qty":40,"avgCost":165.2,"price":213.5}\n]'}
+function parseCSV(text){const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());if(!lines.length)return[];let start=0;const head=lines[0].toLowerCase();if(head.includes('symbol')||head.includes('qty')||head.includes('股'))start=1;const out=[];for(let i=start;i<lines.length;i++){const c=lines[i].split(',').map(s=>s.trim());if(c.length<4)continue;out.push({symbol:c[0],name:c[1]||'',qty:parseFloat(c[2])||0,avgCost:parseFloat(c[3])||0,price:parseFloat(c[4])||parseFloat(c[3])||0})}return out}
+function parseData(text){text=text.trim();if(!text)return null;if(importFmt==='json'||text.startsWith('[')||text.startsWith('{')){try{let j=JSON.parse(text);if(!Array.isArray(j))j=[j];return j.map(r=>({symbol:r.symbol||r.code||r.ticker||'?',name:r.name||'',qty:+r.qty||+r.quantity||0,avgCost:+r.avgCost||+r.cost||0,price:+r.price||+r.currentPrice||0}))}catch(e){toast('⚠️ JSON 格式錯誤',e.message);return null}}return parseCSV(text)}
+const drop=document.getElementById('drop'),fileInput=document.getElementById('fileInput');
+drop.onclick=()=>fileInput.click();
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,(e)=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,(e)=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',(e)=>{const f=e.dataTransfer.files[0];if(f)readFile(f)});
+fileInput.onchange=()=>{if(fileInput.files[0])readFile(fileInput.files[0])};
+function readFile(f){importFmt=f.name.endsWith('.json')?'json':'csv';const r=new FileReader();r.onload=()=>{document.getElementById('pasteArea').value=r.result;toast('📄 已讀取 '+f.name,'按「匯入」確認')};r.readAsText(f)}
+document.getElementById('loadSampleBtn').onclick=()=>{document.getElementById('pasteArea').value=importFmt==='json'?JSON.stringify(SAMPLE[currentAcc]||SAMPLE.ibkr,null,2):'symbol,name,qty,avgCost,price\n'+(SAMPLE[currentAcc]||SAMPLE.ibkr).map(r=>`${r.symbol},${r.name},${r.qty},${r.avgCost},${r.price}`).join('\n')};
+document.getElementById('confirmImport').onclick=()=>{const t=document.getElementById('pasteArea').value;const d=parseData(t);if(!d||!d.length){toast('⚠️ 沒有可匯入資料','請檢查格式');return}save(currentAcc,d);overlay.classList.remove('open');document.getElementById('pasteArea').value='';render();toast('✅ 匯入成功',d.length+' 個持倉已更新到 '+(currentAcc==='futu'?'富途牛牛':'IBKR'))};
+
+/* ===== Settings ===== */
+const settingsOverlay=document.getElementById('settingsOverlay');
+document.getElementById('settingsBtn').onclick=()=>{document.getElementById('finnhubKey').value=settings.key||'';document.getElementById('tdKey').value=settings.td||'';settingsOverlay.classList.add('open')};
+document.getElementById('settingsCancel').onclick=()=>settingsOverlay.classList.remove('open');
+settingsOverlay.onclick=(e)=>{if(e.target===settingsOverlay)settingsOverlay.classList.remove('open')};
+document.getElementById('settingsSave').onclick=()=>{settings.key=document.getElementById('finnhubKey').value.trim();settings.td=document.getElementById('tdKey').value.trim();saveSettings();settingsOverlay.classList.remove('open');updateLive();if(settings.key){toast('✅ 已儲存 Key','撳「更新報價」攞真實數據');refreshQuotes()}};
+function updateLive(){const on=!!settings.key;document.getElementById('liveDot').classList.toggle('on',on);document.getElementById('liveText').textContent=on?'真實模式 · Finnhub 已連接（自動更新報價 + 持倉新聞）':'離線模式 · 用示例 / Import 資料（喺設定加 Finnhub Key 即可真實報價 + 新聞）';document.getElementById('newsStatus').textContent=on?'真實新聞 · Finnhub':'示例新聞 · 加 Finnhub Key 即可真實'}
+
+/* ===== Real quotes + news via Finnhub ===== */
+async function fetchQuote(sym){const u="https://finnhub.io/api/v1/quote?symbol="+encodeURIComponent(sym)+"&token="+settings.key;const r=await fetch(u);if(!r.ok)throw new Error('quote '+r.status);return r.json()}
+async function refreshQuotes(){if(!settings.key){toast('ℹ️ 未設定 Finnhub Key','喺設定加 key 先有真實報價');return}const accs=currentAcc==='all'?['ibkr','futu']:[currentAcc];let updated=0;for(const acc of accs){const data=load(acc);for(const row of data){try{const q=await fetchQuote(row.symbol);if(q&&q.c){row.price=q.c;updated++}}catch(e){}}save(acc,data)}render();toast(updated?'🔄 報價已更新':'⚠️ 攞唔到報價',updated?updated+' 隻已更新':'檢查 key 或股票代號');pollNews()}
+async function fetchNews(sym){const to=new Date(),from=new Date(Date.now()-7*864e5);const f=d=>d.toISOString().slice(0,10);const u="https://finnhub.io/api/v1/company-news?symbol="+encodeURIComponent(sym)+"&from="+f(from)+"&to="+f(to)+"&token="+settings.key;const r=await fetch(u);if(!r.ok)return[];const j=await r.json();return(j||[]).slice(0,3).map(n=>({sym,title:n.headline,url:n.url,source:n.source,time:new Date(n.datetime*1000),id:n.id||n.headline}))}
+async function pollNews(){if(!settings.key)return;const rows=getData(currentAcc);let all=[];for(const r of rows){try{const ns=await fetchNews(r.symbol);all=all.concat(ns)}catch(e){}}all.sort((a,b)=>b.time-a.time);const list=document.getElementById('newsList');if(all.length){list.innerHTML=all.slice(0,12).map(n=>`<div class="news-item"><div class="news-tk">${n.sym.slice(0,4)}</div><div class="news-body"><a href="${n.url}" target="_blank"><h4>${n.title}</h4></a><div class="news-meta"><span>${n.sym}</span><span>${n.source||''}</span><span>${n.time.toLocaleString('zh-HK',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div></div></div>`).join('')}
+  all.forEach(n=>{if(!seenNews[n.id]){seenNews[n.id]=1;if(Object.keys(seenNews).length>1)pushNews(n.sym,n.title)}})}
+
+/* ===== Notifications ===== */
+document.getElementById('refreshBtn').onclick=refreshQuotes;
+document.getElementById('notifyBtn').onclick=async()=>{if(!('Notification'in window)){toast('⚠️ 你個瀏覽器唔支援通知');return}const p=await Notification.requestPermission();toast(p==='granted'?'🔔 通知已啟用':'通知被拒絕',p==='granted'?'有持倉相關新聞會彈提醒':'可在瀏覽器設定重新開啟')};
+function pushNews(sym,title){toast('📰 '+sym+' 新聞',title);if(('Notification'in window)&&Notification.permission==='granted')new Notification('📈 '+sym+' 持倉新聞',{body:title})}
+function toast(title,body){const w=document.getElementById('toastWrap'),el=document.createElement('div');el.className='toast';el.innerHTML=`<div class="ic">🔔</div><div><h5>${title}</h5>${body?`<p>${body}</p>`:''}</div>`;w.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(40px)';el.style.transition='.3s';setTimeout(()=>el.remove(),300)},4500)}
+
+/* ===== Auto poll ===== */
+function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(()=>{if(settings.key){refreshQuotesSilent();pollNews()}},60000)}
+async function refreshQuotesSilent(){const accs=['ibkr','futu'];for(const acc of accs){const data=load(acc);let ch=false;for(const row of data){try{const q=await fetchQuote(row.symbol);if(q&&q.c){row.price=q.c;ch=true}}catch(e){}}if(ch)save(acc,data)}render()}
+
+loadSettings();updateLive();render();if(settings.key){refreshQuotes();}startPolling();
+</script>
+</body>
+</html>
