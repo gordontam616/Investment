@@ -124,6 +124,24 @@
   .range-seg button.active{background:var(--accent-soft);color:var(--text)}
   .chart-card{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
   .chart-lbl{font-size:11.5px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+  .ccy-seg{display:flex;gap:4px;background:var(--card-2);padding:4px;border-radius:10px;border:1px solid var(--border)}
+  .ccy-seg button{font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:6px 11px;border-radius:7px;background:transparent;color:var(--muted);border:none}
+  .ccy-seg button.active{background:var(--accent-soft);color:var(--text)}
+  .tf-seg{display:flex;gap:5px;background:var(--bg-2);padding:4px;border-radius:10px;flex-wrap:wrap;justify-content:flex-end;max-width:330px}
+  .tf-seg button{font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 10px;border-radius:7px;background:transparent;color:var(--muted);border:none}
+  .tf-seg button.active{background:var(--accent-soft);color:var(--text)}
+  .ai-out{font-size:13.5px;line-height:1.7}
+  .ai-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:4px 0 16px}
+  .ai-metric{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
+  .ai-metric .l{font-size:11px;color:var(--muted);margin-bottom:5px}
+  .ai-metric .v{font-size:17px;font-weight:700}
+  .ai-sec{margin:16px 0 4px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .ai-li{display:flex;gap:9px;padding:7px 0;font-size:13px;line-height:1.6;border-bottom:1px solid rgba(42,35,80,.4)}
+  .ai-li:last-child{border-bottom:none}
+  .ai-li .ic{flex-shrink:0}
+  .ai-placeholder,.ai-think{color:var(--muted);font-size:13px}
+  .sd-news-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(42,35,80,.5)}
+  .sd-news-item:last-child{border-bottom:none}
   @media(max-width:880px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.shell,.topbar{padding-left:18px;padding-right:18px}.modal.wide{width:100%}}
 </style>
 </head>
@@ -131,6 +149,7 @@
   <div class="topbar">
     <div class="brand"><span class="logo">📈</span><span>Investment Hub<small>一次過睇實你兩個戶口持倉</small></span></div>
     <div class="topbar-actions">
+      <div class="ccy-seg" id="ccySeg"><button data-c="USD" class="active">US$</button><button data-c="HKD">HK$</button></div>
       <button class="btn ghost" id="settingsBtn">⚙️ 設定</button>
       <button class="btn ghost" id="refreshBtn">🔄 更新報價</button>
       <button class="btn ghost" id="notifyBtn">🔔 啟用通知</button>
@@ -176,11 +195,16 @@
     </div>
 
     <div class="panel">
+      <div class="panel-head"><h2>🤖 AI 持倉分析</h2><button class="btn primary sm" id="aiBtn">✨ 產生分析</button></div>
+      <div id="aiOut" class="ai-out"><div class="ai-placeholder">撳「✨ 產生分析」，AI 會根據你而家嘅持倉即時計出市值分佈、集中度、最佳／最差表現同風險提示。</div></div>
+    </div>
+
+    <div class="panel">
       <div class="panel-head"><h2>📰 投資新聞 <span class="badge-soon">根據你持倉</span></h2><span id="newsStatus" style="font-size:12px;color:var(--muted);">示例新聞 · 加 Finnhub Key 即可真實</span></div>
       <div id="newsList"></div>
     </div>
 
-    <p class="foot">Investment Hub · 資料存喺你部瀏覽器（localStorage），唔會上傳。<br>真實報價 / 新聞經 Finnhub（免費 Key）· 富途 OpenD / IBKR 需本地 gateway（詳見設定）。</p>
+    <p class="foot">Investment Hub · 資料存喺你部瀏覽器（localStorage），唔會上傳。<br>真實報價 / 新聞經 Finnhub（免費 Key）· 富途 OpenD / IBKR 需本地 gateway（需進階設定）。</p>
   </main>
 
   <!-- Import modal -->
@@ -227,19 +251,23 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
           <button class="btn ghost sm" id="sdClose">✕ 關閉</button>
-          <div class="range-seg" id="rangeSeg">
-            <button data-r="60">3M</button><button class="active" data-r="120">6M</button><button data-r="250">1Y</button>
+          <div class="tf-seg" id="tfSeg">
+            <button class="active" data-tf="1D">日K</button><button data-tf="1M">月K</button><button data-tf="1Y">年K</button><button data-tf="4H">4小時</button><button data-tf="5D">5日</button><button data-tf="FULL">全日</button>
           </div>
         </div>
       </div>
       <div class="ma-toggles" id="maToggles"></div>
       <div class="chart-card">
-        <div class="chart-lbl"><span>K 線圖（日線）+ 均線</span><span id="klineNote" style="color:var(--muted-2)"></span></div>
+        <div class="chart-lbl"><span id="klineTitle">K 線圖（日K）+ 均線</span><span id="klineNote" style="color:var(--muted-2)"></span></div>
         <canvas id="kline" width="800" height="320"></canvas>
       </div>
       <div class="chart-card">
         <div class="chart-lbl"><span>RSI (14)</span><span id="rsiVal"></span></div>
         <canvas id="rsi" width="800" height="120"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-lbl"><span>📰 相關新聞</span><span id="sdNewsStatus" style="color:var(--muted-2)"></span></div>
+        <div id="sdNews"></div>
       </div>
     </div>
   </div>
@@ -249,7 +277,13 @@
 <script>
 const CHART_COLORS=['#8b5cf6','#2dd4a7','#f4607a','#ffa53b','#4cc3ff','#c084fc','#facc15','#5eead4','#fb7185','#a3a3ff'];
 const MA_DEFS=[{p:5,c:'#facc15'},{p:10,c:'#4cc3ff'},{p:20,c:'#f4607a'},{p:50,c:'#2dd4a7'},{p:60,c:'#c084fc'}];
-const fmt=(n)=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+let displayCcy='USD';const USDHKD=7.8;
+function ccyOf(s){return /\.HK$/i.test(s)?'HKD':'USD'}
+function toUSD(v,nc){return nc==='USD'?v:v/USDHKD}
+function toDisp(v,nc){const u=toUSD(v,nc);return displayCcy==='USD'?u:u*USDHKD}
+function csym(ccy){return ccy==='HKD'?'HK$':'$'}
+function fmtC(n,ccy){return (n<0?'-':'')+csym(ccy)+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+const fmt=(n)=>fmtC(n,displayCcy);
 const fmtN=(n)=>n.toLocaleString('en-US',{maximumFractionDigits:4});
 const pct=(n)=>(n>=0?'+':'')+n.toFixed(2)+'%';
 
@@ -264,8 +298,8 @@ let currentAcc='ibkr', importFmt='csv', settings={key:''}, pollTimer=null, seenN
 function load(acc){const raw=localStorage.getItem('ih_'+acc);if(raw){try{return JSON.parse(raw)}catch(e){}}return acc==='all'?[]:(SAMPLE[acc]?JSON.parse(JSON.stringify(SAMPLE[acc])):[])}
 function save(acc,d){localStorage.setItem('ih_'+acc,JSON.stringify(d))}
 function getData(acc){if(acc==='all')return[...load('ibkr'),...load('futu')];return load(acc)}
-function enrich(rows){return rows.map(r=>{const mv=r.qty*r.price,cost=r.qty*r.avgCost,pnl=mv-cost,ret=cost?pnl/cost*100:0;return{...r,mv,cost,pnl,ret}})}
-function loadSettings(){const DK="d90k85hr01qj6urtj24gd90k85hr01qj6urtj250";const DT="089fbc7d69254b699f2c16276f39eb9f";try{settings=JSON.parse(localStorage.getItem("ih_settings"))||{key:""}}catch(e){settings={key:""}}if(!settings.key)settings.key=DK;if(!settings.td)settings.td=DT;}
+function enrich(rows){return rows.map(r=>{const nc=ccyOf(r.symbol);const dPrice=toDisp(r.price,nc),dCost=toDisp(r.avgCost,nc);const mv=r.qty*dPrice,cost=r.qty*dCost,pnl=mv-cost,ret=cost?pnl/cost*100:0;return{...r,nc,dPrice,dCost,mv,cost,pnl,ret}})}
+function loadSettings(){const DK="d90k85hr01qj6urtj24gd90k85hr01qj6urtj250";const DT="089fbc7d69254b699f2c16276f39eb9f";try{settings=JSON.parse(localStorage.getItem("ih_settings"))||{key:""}}catch(e){settings={key:""}}if(!settings.key)settings.key=DK;if(!settings.td)settings.td=DT;if(settings.ccy)displayCcy=settings.ccy;}
 function saveSettings(){localStorage.setItem('ih_settings',JSON.stringify(settings))}
 
 function render(){
@@ -283,12 +317,12 @@ function render(){
   if(!rows.length){tb.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px;">沒有持倉資料 — 點 Import 匯入</td></tr>`}
   else{tb.innerHTML=rows.map((r,i)=>`<tr class="clickable" data-i="${i}">
       <td><div class="sym"><div class="tk">${r.symbol.slice(0,4)}</div><div><strong>${r.symbol}</strong><div class="nm">${r.name||''}</div></div></div></td>
-      <td class="num">${fmtN(r.qty)}</td><td class="num">${fmt(r.avgCost)}</td><td class="num">${fmt(r.price)}</td>
+      <td class="num">${fmtN(r.qty)}</td><td class="num">${fmt(r.dCost)}</td><td class="num">${fmt(r.dPrice)}</td>
       <td class="num">${fmt(r.mv)}</td><td class="num ${r.pnl>=0?'up':'down'}">${fmt(r.pnl)}</td>
       <td class="num ${r.ret>=0?'up':'down'}">${pct(r.ret)}</td><td class="num">${totalMV?(r.mv/totalMV*100).toFixed(1):0}%</td>
       <td class="chev">›</td></tr>`).join('');
     tb.querySelectorAll('tr.clickable').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i]));}
-  drawDonut(rows,totalMV);drawBars(rows);renderNews(rows);
+  drawDonut(rows,totalMV);drawBars(rows);renderNews(rows);var _ao=document.getElementById('aiOut');if(_ao&&_ao.dataset.done)aiAnalyze();
 }
 function drawDonut(rows,total){const cv=document.getElementById('donut'),ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);const cx=90,cy=90,rO=82,rI=52,lg=document.getElementById('donutLegend');if(!rows.length||!total){lg.innerHTML='';return}const s=[...rows].sort((a,b)=>b.mv-a.mv);let st=-Math.PI/2;s.forEach((r,i)=>{const f=r.mv/total,e=st+f*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,rO,st,e);ctx.closePath();ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fill();st=e});ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(cx,cy,rI,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';lg.innerHTML=s.map((r,i)=>`<div class="legend-item"><span class="sw" style="background:${CHART_COLORS[i%CHART_COLORS.length]}"></span>${r.symbol}<span class="pct">${(r.mv/total*100).toFixed(1)}%</span></div>`).join('')}
 function drawBars(rows){const w=document.getElementById('pnlBars');if(!rows.length){w.innerHTML='';return}const s=[...rows].sort((a,b)=>b.pnl-a.pnl),mx=Math.max(...s.map(r=>Math.abs(r.pnl)),1);w.innerHTML=s.map(r=>`<div class="bar-row"><span>${r.symbol}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.abs(r.pnl)/mx*100}%;background:${r.pnl>=0?'var(--green)':'var(--red)'}"></div></div><span class="num ${r.pnl>=0?'up':'down'}" style="text-align:right;">${fmt(r.pnl)}</span></div>`).join('')}
@@ -305,24 +339,28 @@ function genCandles(symbol,lastPrice,n){const rng=mulberry32(hashSeed(symbol));c
 function sma(arr,p){const r=[];for(let i=0;i<arr.length;i++){if(i<p-1){r.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=arr[j];r.push(s/p)}return r}
 function rsi(closes,p){const r=[];let g=0,l=0;for(let i=1;i<closes.length;i++){const d=closes[i]-closes[i-1];if(i<=p){if(d>=0)g+=d;else l-=d;if(i===p){g/=p;l/=p;r[i]=100-100/(1+(l===0?100:g/l))}else r[i]=null}else{const gain=d>0?d:0,loss=d<0?-d:0;g=(g*(p-1)+gain)/p;l=(l*(p-1)+loss)/p;r[i]=100-100/(1+(l===0?100:g/l))}}r[0]=null;return r}
 
-let detailState={candles:[],ma:{5:true,10:false,20:true,50:false,60:false},range:120,row:null};
-function openDetail(row){detailState.row=row;document.getElementById('sdTk').textContent=row.symbol.slice(0,4);document.getElementById('sdSym').textContent=row.symbol;document.getElementById('sdName').textContent=row.name||'';document.getElementById('sdPrice').textContent=fmt(row.price);const ch=(row.ret>=0?'+':'')+fmt(row.pnl)+' ('+pct(row.ret)+')';const sc=document.getElementById('sdChange');sc.textContent='持倉盈虧 '+ch;sc.className='sd-sub '+(row.pnl>=0?'up':'down');
+const TF_DEFS={'1D':{label:'日K',int:'1day',size:180,sim:180},'1M':{label:'月K',int:'1month',size:60,sim:60},'1Y':{label:'年K',int:'1month',size:240,agg:'year',sim:18},'4H':{label:'4小時',int:'4h',size:120,sim:120},'5D':{label:'5日',int:'5min',size:390,sim:130},'FULL':{label:'全日',int:'15min',size:130,prepost:true,sim:130}};
+let detailState={candles:[],ma:{5:true,10:false,20:true,50:false,60:false},tf:'1D',row:null};
+function openDetail(row){detailState.row=row;var nc=row.nc||ccyOf(row.symbol);document.getElementById('sdTk').textContent=row.symbol.slice(0,4);document.getElementById('sdSym').textContent=row.symbol;document.getElementById('sdName').textContent=row.name||'';document.getElementById('sdPrice').textContent=fmtC(row.price,nc);var nPnl=row.qty*(row.price-row.avgCost);var nRet=row.avgCost?(row.price-row.avgCost)/row.avgCost*100:0;const ch=(nRet>=0?'+':'')+fmtC(nPnl,nc)+' ('+pct(nRet)+')';const sc=document.getElementById('sdChange');sc.textContent='持倉盈虧 '+ch;sc.className='sd-sub '+(nPnl>=0?'up':'down');
   document.getElementById('maToggles').innerHTML=MA_DEFS.map(m=>`<button class="ma-tg ${detailState.ma[m.p]?'on':''}" data-p="${m.p}"><span class="ln" style="background:${m.c}"></span>MA${m.p}</button>`).join('');
   document.getElementById('maToggles').querySelectorAll('.ma-tg').forEach(b=>b.onclick=()=>{const p=+b.dataset.p;detailState.ma[p]=!detailState.ma[p];b.classList.toggle('on');drawKline()});
-  document.getElementById('rangeSeg').querySelectorAll('button').forEach(b=>{b.classList.toggle('active',+b.dataset.r===detailState.range);b.onclick=()=>{detailState.range=+b.dataset.r;document.getElementById('rangeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));buildCandles();drawKline();drawRSI();loadRealCandles()}});
-  document.getElementById('klineNote').textContent=settings.key?'':'模擬數據（可駁真實歷史源）';
-  buildCandles();document.getElementById('detailOverlay').classList.add('open');drawKline();drawRSI();loadRealCandles();}
-function buildCandles(){detailState.candles=genCandles(detailState.row.symbol,detailState.row.price,detailState.range);detailState.source='sim'}
+  document.getElementById('tfSeg').querySelectorAll('button').forEach(b=>{b.classList.toggle('active',b.dataset.tf===detailState.tf);b.onclick=()=>{detailState.tf=b.dataset.tf;document.getElementById('tfSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));updateKlineTitle();buildCandles();drawKline();drawRSI();loadRealCandles()}});
+  updateKlineTitle();document.getElementById('klineNote').textContent=settings.key?'':'模擬數據（可駁真實歷史源）';
+  buildCandles();document.getElementById('detailOverlay').classList.add('open');drawKline();drawRSI();loadRealCandles();renderDetailNews(row);}
+function updateKlineTitle(){var t=document.getElementById('klineTitle');if(t)t.textContent='K 線圖（'+((TF_DEFS[detailState.tf]||TF_DEFS['1D']).label)+'）+ 均線'}
+function buildCandles(){var tf=TF_DEFS[detailState.tf]||TF_DEFS['1D'];detailState.candles=genCandles(detailState.row.symbol,detailState.row.price,tf.sim);detailState.source='sim'}
 const candleCache={};
-function ckey(sym,n){return sym+'_'+n}
+function ckey(sym,tf){return sym+'_'+tf}
 function lsCandleGet(ck){try{var o=JSON.parse(localStorage.getItem('ih_c_'+ck));if(o&&o.day===new Date().toDateString())return o}catch(e){}return null}
 function lsCandleSet(ck,res){try{localStorage.setItem('ih_c_'+ck,JSON.stringify({day:new Date().toDateString(),src:res.src,candles:res.candles}))}catch(e){}}
 function mapStooq(sym){if(/^\^/.test(sym))return null;if(/\.HK$/i.test(sym)){var code=sym.replace(/\.HK$/i,'').replace(/^0+/,'');return code?code+'.hk':null}return sym.toLowerCase()+'.us'}
-async function tdCandles(sym,n){if(!settings.td)return null;var u='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(sym)+'&interval=1day&outputsize='+n+'&apikey='+settings.td;var r=await fetch(u);if(!r.ok)return null;var j=await r.json();if(!j||!j.values||j.status==='error')return null;var cs=j.values.map(function(v){return{o:+v.open,h:+v.high,l:+v.low,c:+v.close}}).reverse().filter(function(x){return x.c});return cs.length?{src:'Twelve Data',candles:cs}:null}
+async function tdCandles(sym,tf){if(!settings.td)return null;var d=TF_DEFS[tf]||TF_DEFS['1D'];var u='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(sym)+'&interval='+d.int+'&outputsize='+d.size+(d.prepost?'&prepost=true':'')+'&apikey='+settings.td;var r=await fetch(u);if(!r.ok)return null;var j=await r.json();if(!j||!j.values||j.status==='error')return null;var cs=j.values.map(function(v){return{o:+v.open,h:+v.high,l:+v.low,c:+v.close,t:v.datetime}}).reverse().filter(function(x){return x.c});if(d.agg==='year')cs=aggYear(cs);return cs.length?{src:'Twelve Data',candles:cs}:null}
+function aggYear(cs){var m={},order=[];cs.forEach(function(c){var y=(c.t||'').slice(0,4)||'?';if(!m[y]){m[y]={o:c.o,h:c.h,l:c.l,c:c.c,t:y};order.push(y)}else{var g=m[y];g.h=Math.max(g.h,c.h);g.l=Math.min(g.l,c.l);g.c=c.c}});return order.map(function(y){return m[y]})}
 async function fhCandles(sym,n){if(!settings.key)return null;var to=Math.floor(Date.now()/1000),from=to-Math.floor(n*86400*1.7);var u='https://finnhub.io/api/v1/stock/candle?symbol='+encodeURIComponent(sym)+'&resolution=D&from='+from+'&to='+to+'&token='+settings.key;var r=await fetch(u);if(!r.ok)return null;var j=await r.json();if(!j||j.s!=='ok'||!j.c)return null;var cs=[];for(var i=0;i<j.c.length;i++)cs.push({o:j.o[i],h:j.h[i],l:j.l[i],c:j.c[i]});return cs.length?{src:'Finnhub',candles:cs}:null}
 async function stooqCandles(sym,n){var s=mapStooq(sym);if(!s)return null;var u='https://stooq.com/q/d/l/?s='+s+'&i=d';var r=await fetch(u);if(!r.ok)return null;var t=await r.text();if(!t||t.slice(0,4)!=='Date')return null;var lines=t.trim().split(/\r?\n/).slice(1);var cs=lines.map(function(l){return l.split(',')}).filter(function(c){return c.length>=5}).map(function(c){return{o:+c[1],h:+c[2],l:+c[3],c:+c[4]}}).filter(function(x){return x.c});return cs.length?{src:'Stooq',candles:cs.slice(-n)}:null}
-async function fetchRealCandles(sym,n){var ck=ckey(sym,n);if(candleCache[ck])return candleCache[ck];var ls=lsCandleGet(ck);if(ls){candleCache[ck]=ls;return ls}var fns=[tdCandles,fhCandles,stooqCandles];for(var i=0;i<fns.length;i++){try{var res=await fns[i](sym,n);if(res&&res.candles&&res.candles.length>=20){candleCache[ck]=res;lsCandleSet(ck,res);return res}}catch(e){}}return null}
-async function loadRealCandles(){var row=detailState.row,note=document.getElementById('klineNote');note.textContent='載入緊真實歷史數據…';var res=null;try{res=await fetchRealCandles(row.symbol,detailState.range)}catch(e){}if(detailState.row!==row)return;if(res&&res.candles&&res.candles.length>=20){detailState.candles=res.candles;detailState.source='real';note.textContent='真實數據 · '+res.src}else{detailState.source='sim';note.textContent='模擬數據（真實源取不到）'}drawKline();drawRSI()}
+async function fetchRealCandles(sym,tf){var ck=ckey(sym,tf);if(candleCache[ck])return candleCache[ck];var ls=lsCandleGet(ck);if(ls){candleCache[ck]=ls;return ls}var minBars=tf==='1Y'?6:20;var res=null;try{res=await tdCandles(sym,tf)}catch(e){}if(!(res&&res.candles&&res.candles.length>=minBars)&&tf==='1D'){var daily=[fhCandles,stooqCandles];for(var i=0;i<daily.length;i++){try{var r2=await daily[i](sym,180);if(r2&&r2.candles&&r2.candles.length>=20){res=r2;break}}catch(e){}}}if(res&&res.candles&&res.candles.length>=minBars){candleCache[ck]=res;lsCandleSet(ck,res);return res}return null}
+async function loadRealCandles(){var row=detailState.row,tf=detailState.tf,note=document.getElementById('klineNote');note.textContent='載入緊真實歷史數據…';var res=null;try{res=await fetchRealCandles(row.symbol,tf)}catch(e){}if(detailState.row!==row||detailState.tf!==tf)return;var minBars=tf==='1Y'?6:20;if(res&&res.candles&&res.candles.length>=minBars){detailState.candles=res.candles;detailState.source='real';note.textContent='真實數據 · '+res.src+((((TF_DEFS[tf]||{}).agg)==='year')?'（月線聚合）':'')}else{detailState.source='sim';note.textContent=(tf==='FULL'||tf==='4H'||tf==='5D')?'模擬數據（免費源未必支援此週期）':'模擬數據（真實源取不到）'}drawKline();drawRSI()}
+async function renderDetailNews(row){var box=document.getElementById('sdNews'),st=document.getElementById('sdNewsStatus');if(!box)return;if(settings.key){box.innerHTML='<div class="ai-think">載入緊 '+row.symbol+' 相關新聞…</div>';if(st)st.textContent='Finnhub';try{var ns=await fetchNews(row.symbol);if(detailState.row!==row)return;if(ns&&ns.length){box.innerHTML=ns.map(function(n){return '<div class="sd-news-item"><div class="news-tk">'+n.sym.slice(0,4)+'</div><div class="news-body"><a href="'+n.url+'" target="_blank"><h4>'+n.title+'</h4></a><div class="news-meta"><span>'+n.sym+'</span><span>'+(n.source||'')+'</span><span>'+n.time.toLocaleString('zh-HK',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</span></div></div></div>'}).join('');return}box.innerHTML='<div class="news-empty">暫時抓唔到 '+row.symbol+' 嘅新聞。</div>';return}catch(e){box.innerHTML='<div class="news-empty">新聞載入失敗。</div>';return}}if(st)st.textContent='示例';var t=SAMPLE_NEWS[row.symbol];if(t){box.innerHTML='<div class="sd-news-item"><div class="news-tk">'+row.symbol.slice(0,4)+'</div><div class="news-body"><h4>'+t+'</h4><div class="news-meta"><span>'+row.symbol+'</span><span>示例來源</span><span>剛剛</span></div></div></div>'}else{box.innerHTML='<div class="news-empty">呢隻股票暫時冇示例新聞。<br>喺設定加 Finnhub Key 即可抓真實新聞。</div>'}}
 
 function drawKline(){const cv=document.getElementById('kline'),ctx=cv.getContext('2d');const W=cv.width,H=cv.height,pad=44,padR=14,padT=12,padB=22;ctx.clearRect(0,0,W,H);const cs=detailState.candles;if(!cs.length)return;const closes=cs.map(c=>c.c);let mn=Math.min(...cs.map(c=>c.l)),mx=Math.max(...cs.map(c=>c.h));var _cost=detailState.row&&+detailState.row.avgCost;if(_cost){mn=Math.min(mn,_cost);mx=Math.max(mx,_cost)}const pd=(mx-mn)*0.08;mn-=pd;mx+=pd;const x=i=>pad+(W-pad-padR)*(i/(cs.length-1));const y=v=>padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));
   ctx.strokeStyle='rgba(42,35,80,.6)';ctx.fillStyle='#6f6996';ctx.font='10px sans-serif';ctx.textAlign='right';for(let g=0;g<=4;g++){const v=mn+(mx-mn)*g/4,yy=y(v);ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(W-padR,yy);ctx.stroke();ctx.fillText(v.toFixed(1),pad-6,yy+3)}
@@ -336,6 +374,9 @@ document.getElementById('detailOverlay').onclick=(e)=>{if(e.target.id==='detailO
 
 /* ===== Tabs ===== */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');currentAcc=t.dataset.acc;render()}));
+/* ===== Currency toggle ===== */
+function syncCcySeg(){document.querySelectorAll('#ccySeg button').forEach(x=>x.classList.toggle('active',x.dataset.c===displayCcy))}
+document.querySelectorAll('#ccySeg button').forEach(b=>b.addEventListener('click',()=>{displayCcy=b.dataset.c;settings.ccy=displayCcy;saveSettings();syncCcySeg();render();if(document.getElementById('detailOverlay').classList.contains('open')&&detailState.row)openDetail(detailState.row)}));
 
 /* ===== Import ===== */
 const overlay=document.getElementById('overlay');
@@ -382,7 +423,9 @@ function toast(title,body){const w=document.getElementById('toastWrap'),el=docum
 function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(()=>{if(settings.key){refreshQuotesSilent();pollNews()}},60000)}
 async function refreshQuotesSilent(){const accs=['ibkr','futu'];for(const acc of accs){const data=load(acc);let ch=false;for(const row of data){try{const q=await fetchQuote(row.symbol);if(q&&q.c){row.price=q.c;ch=true}}catch(e){}}if(ch)save(acc,data)}render()}
 
-loadSettings();updateLive();render();if(settings.key){refreshQuotes();}startPolling();
+function aiAnalyze(){var out=document.getElementById('aiOut');if(!out)return;var rows=enrich(getData(currentAcc));if(!rows.length){out.innerHTML='<div class="ai-placeholder">而家冇持倉資料，先 Import 你嘅持倉再分析。</div>';out.dataset.done='1';return}var totalMV=rows.reduce(function(a,r){return a+r.mv},0);var totalCost=rows.reduce(function(a,r){return a+r.cost},0);var totalPnl=totalMV-totalCost,totalRet=totalCost?totalPnl/totalCost*100:0;var sorted=rows.slice().sort(function(a,b){return b.mv-a.mv});var top=sorted[0];var topShare=totalMV?top.mv/totalMV*100:0;var top3=sorted.slice(0,3).reduce(function(a,r){return a+r.mv},0);var top3Share=totalMV?top3/totalMV*100:0;var hhi=rows.reduce(function(a,r){var s=totalMV?r.mv/totalMV:0;return a+s*s},0)*10000;var winners=rows.filter(function(r){return r.pnl>0}).sort(function(a,b){return b.ret-a.ret});var losers=rows.filter(function(r){return r.pnl<0}).sort(function(a,b){return a.ret-b.ret});var best=winners[0],worst=losers[0];var usdN=rows.filter(function(r){return (r.nc||ccyOf(r.symbol))==='USD'}).length;var hkdN=rows.length-usdN;var metrics='<div class="ai-metric"><div class="l">總市值</div><div class="v">'+fmt(totalMV)+'</div></div>'+'<div class="ai-metric"><div class="l">累計盈虧</div><div class="v '+(totalPnl>=0?'up':'down')+'">'+fmt(totalPnl)+' ('+pct(totalRet)+')</div></div>'+'<div class="ai-metric"><div class="l">持倉數目</div><div class="v">'+rows.length+' 隻</div></div>'+'<div class="ai-metric"><div class="l">最大持倉佔比</div><div class="v">'+topShare.toFixed(1)+'%</div></div>';var ins=[];ins.push({ic:'📈',t:'整體表現：你嘅組合'+(totalPnl>=0?'帳面賺 '+fmt(totalPnl):'帳面蝕 '+fmt(Math.abs(totalPnl)))+'，回報率 '+pct(totalRet)+'。'});if(best)ins.push({ic:'🏆',t:'表現最好：'+best.symbol+'（'+(best.name||'')+'）回報 '+pct(best.ret)+'，帳面賺 '+fmt(best.pnl)+'。'});if(worst)ins.push({ic:'⚠️',t:'最弱：'+worst.symbol+'（'+(worst.name||'')+'）回報 '+pct(worst.ret)+'，帳面蝕 '+fmt(Math.abs(worst.pnl))+'，可考慮檢視止蝕或溝貨。'});var cIc,cMsg;if(topShare>=35){cIc='🔴';cMsg='集中度偏高：'+top.symbol+' 已佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，跌起嚟波動會好大，建議適度分散。'}else if(topShare>=20){cIc='🟠';cMsg='集中度中等：最大持倉 '+top.symbol+' 佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，可接受但要留意。'}else{cIc='🟢';cMsg='分散度不錯：最大持倉只佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，風險相對分散。'}ins.push({ic:cIc,t:cMsg+'（HHI≈'+Math.round(hhi)+'，越高越集中）'});ins.push({ic:'⚖️',t:'勝負比：'+winners.length+' 隻賺、'+losers.length+' 隻蝕'+(rows.length?'（勝率 '+Math.round(winners.length/rows.length*100)+'%）':'')+'。'});if(usdN&&hkdN)ins.push({ic:'🌐',t:'幣別分佈：美股 '+usdN+' 隻、港股 '+hkdN+' 隻，組合有美元兌港元匯率風險（現以 '+csym(displayCcy)+' 顯示）。'});var sugg=[];if(topShare>=30)sugg.push('減低 '+top.symbol+' 注碼或加入其他板塊分散風險。');if(worst)sugg.push('檢視蝕得最多嘅 '+worst.symbol+'，分清係基本面轉差定短期波動。');if(best&&winners.length>=2)sugg.push('賺得多嘅 '+best.symbol+' 可考慮部分獲利了結、鎖定利潤。');sugg.push('定期 Import 最新持倉並撳「更新報價」，令分析貼近實況。');var html='<div class="ai-metrics">'+metrics+'</div><div class="ai-sec">🔍 重點洞察</div>'+ins.map(function(x){return '<div class="ai-li"><span class="ic">'+x.ic+'</span><span>'+x.t+'</span></div>'}).join('')+'<div class="ai-sec">💡 建議</div>'+sugg.map(function(s){return '<div class="ai-li"><span class="ic">•</span><span>'+s+'</span></div>'}).join('')+'<div class="ai-li" style="border:none;color:var(--muted-2);margin-top:6px;"><span class="ic">ℹ️</span><span>以上為根據你持倉數據自動生成嘅分析，僅供參考，並非投資建議。</span></div>';out.innerHTML=html;out.dataset.done='1'}
+var _aiBtn=document.getElementById('aiBtn');if(_aiBtn)_aiBtn.onclick=function(){var out=document.getElementById('aiOut');out.innerHTML='<div class="ai-think">🤖 AI 分析緊你嘅持倉…</div>';setTimeout(aiAnalyze,350)};
+loadSettings();syncCcySeg();updateLive();render();if(settings.key){refreshQuotes();}startPolling();
 </script>
 </body>
 </html>
