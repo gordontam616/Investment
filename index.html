@@ -67,7 +67,7 @@
   .chev{color:var(--muted-2);font-size:12px}
   .num{font-variant-numeric:tabular-nums}
   .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-  canvas{max-width:100%}
+  canvas{max-width:100%;height:auto}
   .legend{display:flex;flex-direction:column;gap:9px;flex:1;min-width:130px}
   .legend-item{display:flex;align-items:center;gap:9px;font-size:12.5px}
   .legend-item .sw{width:11px;height:11px;border-radius:4px}
@@ -142,7 +142,61 @@
   .ai-placeholder,.ai-think{color:var(--muted);font-size:13px}
   .sd-news-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(42,35,80,.5)}
   .sd-news-item:last-child{border-bottom:none}
-  @media(max-width:880px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.shell,.topbar{padding-left:18px;padding-right:18px}.modal.wide{width:100%}}
+  @media(max-width:880px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:1fr}
+    .shell{padding:20px 16px 56px}
+    .topbar{padding:14px 16px}
+    .modal.wide{width:100%}
+  }
+  @media(max-width:560px){
+    body{-webkit-text-size-adjust:100%}
+    .topbar{flex-wrap:wrap;gap:11px;padding:12px 14px;position:sticky}
+    .brand{font-size:15.5px}
+    .brand small{font-size:10px}
+    .brand .logo{width:30px;height:30px;font-size:16px}
+    .topbar-actions{width:100%;gap:8px}
+    .topbar-actions .btn{flex:1 1 auto;justify-content:center;padding:10px 8px;font-size:12px}
+    .ccy-seg{flex:1 1 100%;order:-1}
+    .ccy-seg button{flex:1}
+    .shell{padding:16px 12px 48px}
+    .tabs{gap:6px;margin-bottom:18px}
+    .tab{flex:1;justify-content:center;padding:11px 6px;font-size:13px}
+    .statusbar{font-size:11.5px;margin-bottom:14px}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+    .kpi{padding:14px 13px}
+    .kpi::after{display:none}
+    .kpi .label{font-size:11px;margin-bottom:6px}
+    .kpi .value{font-size:20px}
+    .kpi .sub{font-size:11.5px;margin-top:6px}
+    .grid{gap:14px}
+    .panel{padding:16px 14px;margin-bottom:14px}
+    .panel h2{font-size:14px}
+    .panel-head{flex-wrap:wrap;gap:8px}
+    #holdingsTable{font-size:12px}
+    #holdingsTable thead th{padding:0 7px 10px;font-size:10px;letter-spacing:0}
+    #holdingsTable tbody td{padding:11px 7px}
+    .sym{gap:8px}
+    .sym .tk{width:30px;height:30px;font-size:9.5px}
+    .sym strong{font-size:12px}
+    .sym .nm{font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .donut-wrap{justify-content:center}
+    .ai-metrics{grid-template-columns:repeat(2,1fr);gap:9px}
+    .ai-metric{padding:11px 12px}
+    .ai-metric .v{font-size:15px}
+    .overlay{padding:0;align-items:flex-end}
+    .modal{width:100%;max-width:100%;max-height:92vh;border-radius:20px 20px 0 0;padding:20px 16px}
+    .modal.wide{padding:18px 13px}
+    .sd-head{gap:12px}
+    .sd-price{font-size:24px}
+    .tf-seg{max-width:100%;justify-content:flex-start}
+    .tf-seg button{padding:7px 10px}
+    .chart-card{padding:11px 9px}
+    .ma-toggles{gap:6px}
+    .ma-tg{padding:6px 10px;font-size:11.5px}
+    .toast-wrap{right:10px;left:10px;bottom:10px;align-items:stretch}
+    .toast{width:auto}
+  }
 </style>
 </head>
 <body>
