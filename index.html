@@ -347,6 +347,14 @@ const SAMPLE={
 };
 const SAMPLE_NEWS={'AAPL':'Apple 傳將於 WWDC 推 AI 新功能，分析師上調目標價','NVDA':'NVIDIA 新一代 GPU 需求強勁，數據中心收入再創新高','MSFT':'Microsoft Copilot 企業客戶增長，雲端收入超預期','0700.HK':'騰訊遊戲業務回暖，季度收入超市場預期','9988.HK':'阿里雲增長加速，重申回購計劃','1810.HK':'小米電動車交付量創新高，帶動股價上揚','TSLA':'Tesla Robotaxi 進展受關注，股價波動加劇'};
 
+const ACCOUNT_SUMMARY={
+  ibkr:{net:18327,mkt:18337.10,today:75,pnl:1779},
+  futu:{net:43119.78,mkt:47838.71,today:141.09,pnl:9469.13}
+};
+let summaryStore=JSON.parse(JSON.stringify(ACCOUNT_SUMMARY));
+function loadSummaryStore(){try{var s=JSON.parse(localStorage.getItem('ih_summary'));if(s)summaryStore=s}catch(e){}}
+function getSummary(acc){if(acc==='all'){var a=summaryStore.ibkr,b=summaryStore.futu;if(!a&&!b)return null;var A=a||{net:0,mkt:0,today:0,pnl:0},B=b||{net:0,mkt:0,today:0,pnl:0};return{net:A.net+B.net,mkt:A.mkt+B.mkt,today:A.today+B.today,pnl:A.pnl+B.pnl}}return summaryStore[acc]||null}
+function dispH(v){return displayCcy==='HKD'?v:v/USDHKD}
 let currentAcc='ibkr', importFmt='csv', settings={key:''}, pollTimer=null, seenNews={};
 
 function load(acc){const raw=localStorage.getItem('ih_'+acc);if(raw){try{return JSON.parse(raw)}catch(e){}}return acc==='all'?[]:(SAMPLE[acc]?JSON.parse(JSON.stringify(SAMPLE[acc])):[])}
@@ -360,13 +368,25 @@ function render(){
   const rows=enrich(getData(currentAcc));
   const totalMV=rows.reduce((a,r)=>a+r.mv,0),totalCost=rows.reduce((a,r)=>a+r.cost,0);
   const totalPnl=totalMV-totalCost,totalRet=totalCost?totalPnl/totalCost*100:0;
-  const today=rows.reduce((a,r)=>a+r.mv*0.01*Math.sin(r.symbol.length*1.3),0);
-  const todayPct=totalMV?today/totalMV*100:0;
-  document.getElementById('kpiGrid').innerHTML=`
+  const sm=getSummary(currentAcc);
+  if(sm){
+    const cash=sm.net-sm.mkt;
+    const tPct=(sm.net-sm.today)?sm.today/(sm.net-sm.today)*100:0;
+    const pPct=(sm.mkt-sm.pnl)?sm.pnl/(sm.mkt-sm.pnl)*100:0;
+    document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi"><div class="label">資產淨值</div><div class="value num">${fmt(dispH(sm.net))}</div><div class="sub" style="color:var(--muted)">證券市值 ${fmt(dispH(sm.mkt))}</div></div>
+    <div class="kpi"><div class="label">今日盈虧</div><div class="value num ${sm.today>=0?'up':'down'}">${fmt(dispH(sm.today))}</div><div class="sub"><span class="pill ${sm.today>=0?'up':'down'}">${pct(tPct)}</span></div></div>
+    <div class="kpi"><div class="label">持倉盈虧</div><div class="value num ${sm.pnl>=0?'up':'down'}">${fmt(dispH(sm.pnl))}</div><div class="sub"><span class="pill ${sm.pnl>=0?'up':'down'}">${pct(pPct)}</span></div></div>
+    <div class="kpi"><div class="label">${cash>=0?'現金結餘':'融資/欠款'}</div><div class="value num">${fmt(dispH(cash))}</div><div class="sub" style="color:var(--muted)">${rows.length} 個持倉 · 淨值-市值</div></div>`;
+  }else{
+    const today=rows.reduce((a,r)=>a+r.mv*0.01*Math.sin(r.symbol.length*1.3),0);
+    const todayPct=totalMV?today/totalMV*100:0;
+    document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi"><div class="label">總市值</div><div class="value num">${fmt(totalMV)}</div><div class="sub" style="color:var(--muted)">${rows.length} 個持倉</div></div>
     <div class="kpi"><div class="label">今日盈虧</div><div class="value num ${today>=0?'up':'down'}">${fmt(today)}</div><div class="sub"><span class="pill ${today>=0?'up':'down'}">${pct(todayPct)}</span></div></div>
     <div class="kpi"><div class="label">累計盈虧</div><div class="value num ${totalPnl>=0?'up':'down'}">${fmt(totalPnl)}</div><div class="sub"><span class="pill ${totalPnl>=0?'up':'down'}">${pct(totalRet)}</span></div></div>
     <div class="kpi"><div class="label">成本總額</div><div class="value num">${fmt(totalCost)}</div><div class="sub" style="color:var(--muted)">平均回報 ${pct(totalRet)}</div></div>`;
+  }
   const tb=document.querySelector('#holdingsTable tbody');
   if(!rows.length){tb.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px;">沒有持倉資料 — 點 Import 匯入</td></tr>`}
   else{tb.innerHTML=rows.map((r,i)=>`<tr class="clickable" data-i="${i}">
@@ -479,7 +499,7 @@ async function refreshQuotesSilent(){const accs=['ibkr','futu'];for(const acc of
 
 function aiAnalyze(){var out=document.getElementById('aiOut');if(!out)return;var rows=enrich(getData(currentAcc));if(!rows.length){out.innerHTML='<div class="ai-placeholder">而家冇持倉資料，先 Import 你嘅持倉再分析。</div>';out.dataset.done='1';return}var totalMV=rows.reduce(function(a,r){return a+r.mv},0);var totalCost=rows.reduce(function(a,r){return a+r.cost},0);var totalPnl=totalMV-totalCost,totalRet=totalCost?totalPnl/totalCost*100:0;var sorted=rows.slice().sort(function(a,b){return b.mv-a.mv});var top=sorted[0];var topShare=totalMV?top.mv/totalMV*100:0;var top3=sorted.slice(0,3).reduce(function(a,r){return a+r.mv},0);var top3Share=totalMV?top3/totalMV*100:0;var hhi=rows.reduce(function(a,r){var s=totalMV?r.mv/totalMV:0;return a+s*s},0)*10000;var winners=rows.filter(function(r){return r.pnl>0}).sort(function(a,b){return b.ret-a.ret});var losers=rows.filter(function(r){return r.pnl<0}).sort(function(a,b){return a.ret-b.ret});var best=winners[0],worst=losers[0];var usdN=rows.filter(function(r){return (r.nc||ccyOf(r.symbol))==='USD'}).length;var hkdN=rows.length-usdN;var metrics='<div class="ai-metric"><div class="l">總市值</div><div class="v">'+fmt(totalMV)+'</div></div>'+'<div class="ai-metric"><div class="l">累計盈虧</div><div class="v '+(totalPnl>=0?'up':'down')+'">'+fmt(totalPnl)+' ('+pct(totalRet)+')</div></div>'+'<div class="ai-metric"><div class="l">持倉數目</div><div class="v">'+rows.length+' 隻</div></div>'+'<div class="ai-metric"><div class="l">最大持倉佔比</div><div class="v">'+topShare.toFixed(1)+'%</div></div>';var ins=[];ins.push({ic:'📈',t:'整體表現：你嘅組合'+(totalPnl>=0?'帳面賺 '+fmt(totalPnl):'帳面蝕 '+fmt(Math.abs(totalPnl)))+'，回報率 '+pct(totalRet)+'。'});if(best)ins.push({ic:'🏆',t:'表現最好：'+best.symbol+'（'+(best.name||'')+'）回報 '+pct(best.ret)+'，帳面賺 '+fmt(best.pnl)+'。'});if(worst)ins.push({ic:'⚠️',t:'最弱：'+worst.symbol+'（'+(worst.name||'')+'）回報 '+pct(worst.ret)+'，帳面蝕 '+fmt(Math.abs(worst.pnl))+'，可考慮檢視止蝕或溝貨。'});var cIc,cMsg;if(topShare>=35){cIc='🔴';cMsg='集中度偏高：'+top.symbol+' 已佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，跌起嚟波動會好大，建議適度分散。'}else if(topShare>=20){cIc='🟠';cMsg='集中度中等：最大持倉 '+top.symbol+' 佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，可接受但要留意。'}else{cIc='🟢';cMsg='分散度不錯：最大持倉只佔 '+topShare.toFixed(1)+'%，前三大佔 '+top3Share.toFixed(1)+'%，風險相對分散。'}ins.push({ic:cIc,t:cMsg+'（HHI≈'+Math.round(hhi)+'，越高越集中）'});ins.push({ic:'⚖️',t:'勝負比：'+winners.length+' 隻賺、'+losers.length+' 隻蝕'+(rows.length?'（勝率 '+Math.round(winners.length/rows.length*100)+'%）':'')+'。'});if(usdN&&hkdN)ins.push({ic:'🌐',t:'幣別分佈：美股 '+usdN+' 隻、港股 '+hkdN+' 隻，組合有美元兌港元匯率風險（現以 '+csym(displayCcy)+' 顯示）。'});var sugg=[];if(topShare>=30)sugg.push('減低 '+top.symbol+' 注碼或加入其他板塊分散風險。');if(worst)sugg.push('檢視蝕得最多嘅 '+worst.symbol+'，分清係基本面轉差定短期波動。');if(best&&winners.length>=2)sugg.push('賺得多嘅 '+best.symbol+' 可考慮部分獲利了結、鎖定利潤。');sugg.push('定期 Import 最新持倉並撳「更新報價」，令分析貼近實況。');var html='<div class="ai-metrics">'+metrics+'</div><div class="ai-sec">🔍 重點洞察</div>'+ins.map(function(x){return '<div class="ai-li"><span class="ic">'+x.ic+'</span><span>'+x.t+'</span></div>'}).join('')+'<div class="ai-sec">💡 建議</div>'+sugg.map(function(s){return '<div class="ai-li"><span class="ic">•</span><span>'+s+'</span></div>'}).join('')+'<div class="ai-li" style="border:none;color:var(--muted-2);margin-top:6px;"><span class="ic">ℹ️</span><span>以上為根據你持倉數據自動生成嘅分析，僅供參考，並非投資建議。</span></div>';out.innerHTML=html;out.dataset.done='1'}
 var _aiBtn=document.getElementById('aiBtn');if(_aiBtn)_aiBtn.onclick=function(){var out=document.getElementById('aiOut');out.innerHTML='<div class="ai-think">🤖 AI 分析緊你嘅持倉…</div>';setTimeout(aiAnalyze,350)};
-loadSettings();syncCcySeg();updateLive();render();if(settings.key){refreshQuotes();}startPolling();
+loadSettings();loadSummaryStore();syncCcySeg();updateLive();render();if(settings.key){refreshQuotes();}startPolling();
 </script>
 </body>
 </html>
